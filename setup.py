@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='GPTPlugins4All',
-    version='1.0.0',
+    version='1.0.2',
     packages=find_packages(),
     description='GPT Plugins for 4all',
     long_description=open('README.md').read(),
@@ -10,7 +10,7 @@ setup(
     author_email='trevor@zenithai.io',
     url='https://github.com/tcmartin/gpt-plugins-4all',
     install_requires=[
-        'uuid', 'json', 'yaml', 'requests', 'openapi_v3_spec_validator', 'urlencode'
+        'PyYAML', 'requests', 'openapi-spec-validator'
     ],
     classifiers=[
         'Programming Language :: Python :: 3',
