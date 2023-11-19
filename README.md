@@ -57,6 +57,10 @@ config.add_auth_method("OAUTH", {
 simplified_api = config.generate_simplified_api_representation()
 print(simplified_api)
 ```
+### Generate Object for use with OpenAI functions
+```python
+tools = config.generate_tools_representation()
+```
 
 ### OAuth Flow
 
@@ -73,9 +77,13 @@ tokens = config.handle_oauth_callback(code_from_redirect)
 response = config.make_api_call("/endpoint", "GET", {"param": "value"})
 ```
 
-## Documentation
-
-For detailed documentation, please refer to [Link to documentation].
+#### Oauth
+```python
+url = config5.start_oauth_flow() #use this url to get code first
+callback = config5.handle_oauth_callback(code)
+#example
+response = config5.make_api_call_by_path(path, "POST", params=your_params, user_token=callback, is_json=True)
+```
 
 ## Contributing
 
