@@ -6,6 +6,7 @@ import requests
 from openapi_spec_validator import openapi_v3_spec_validator  # You may need to install this package
 from urllib.parse import urlencode
 import logging
+import os
 logging.basicConfig(level=logging.INFO)
 
 class AuthMethod(Enum):
@@ -16,6 +17,7 @@ class AuthMethod(Enum):
     NONE = 'NONE'
 
 class Config:
+    cache_file = 'search_cache.json'
     def __init__(self, spec_string):
         self.spec_string = spec_string
         self.spec_object = None
@@ -36,6 +38,74 @@ class Config:
           spec_id=existing_config['id'],
           auth_methods=existing_config['auth_methods']
       )
+    @staticmethod
+    def load_cache():
+        if os.path.exists(Config.cache_file):
+            with open(Config.cache_file, 'r') as file:
+                return json.load(file)
+        return []
+
+    @staticmethod
+    def save_cache(cache_data):
+        with open(Config.cache_file, 'w') as file:
+            json.dump(cache_data, file, indent=4)
+    @staticmethod
+    def search_configs(query, api_key=None, use_cache=True):
+        cached_configs = Config.load_cache()
+
+        if use_cache:
+            # Search within the cached data
+            return [config for config in cached_configs if query in config.get('name', '') or query in config.get('description', '')]
+
+        # If not using cache, fetch new data and update the cache
+        headers = {'Authorization': f'Bearer {api_key}'} if api_key else {}
+        response = requests.get(
+            'https://api.gptplugins4all.com/configs',
+            params={'query': query},
+            headers=headers
+        )
+
+        if response.status_code == 200:
+            new_configs = response.json()
+            # Deduplicate and update cache
+            existing_ids = {config['config_id'] for config in cached_configs}
+            for config in new_configs:
+                if config['config_id'] not in existing_ids:
+                    cached_configs.append(config)
+            Config.save_cache(cached_configs)
+            return new_configs
+        else:
+            raise Exception(f"Search failed: {response.status_code} - {response.text}")
+    @staticmethod
+    def fetch_config_by_id_or_name(config_id, api_key=None):
+        headers = {'Authorization': f'Bearer {api_key}'} if api_key else {}
+        response = requests.get(
+            f'https://api.gptplugins4all.com/configs/{config_id}/fetch',
+            headers=headers
+        )
+        if response.status_code == 200:
+            config_data = response.json()
+            return config_data
+        else:
+            raise Exception(f"Fetch failed: {response.status_code} - {response.text}")
+    @staticmethod
+    def fetch_and_cache(query, api_key, cache, cache_key):
+        headers = {'Authorization': f'Bearer {api_key}'} if api_key else {}
+        response = requests.get(
+            'https://api.gptplugins4all.com/configs',
+            params={'query': query},
+            headers=headers
+        )
+
+        if response.status_code == 200:
+            result = response.json()
+            cache[cache_key] = result
+            Config.save_cache(cache)
+            return result
+        else:
+            raise Exception(f"Search failed: {response.status_code} - {response.text}")
+   
+
     def validate_and_parse_spec(self, spec_string):
       try:
           spec_object = yaml.safe_load(spec_string) if self.is_yaml(spec_string) else json.loads(spec_string)
@@ -58,6 +128,18 @@ class Config:
         except yaml.YAMLError:
             return False
 
+    @classmethod
+    def import_from_name(cls, name, api_key=None):
+        headers = {'Authorization': f'Bearer {api_key}'} if api_key else {}
+        response = requests.get(
+            f'https://gptplugins4all.com/configs/{name}/fetch',
+            headers=headers
+        )
+        if response.status_code == 200:
+            config_data = response.json()
+            return cls(spec_string=json.dumps(config_data))
+        else:
+            raise Exception(f"Import failed: {response.status_code} - {response.text}")
     # Method to add authentication method
     def add_auth_method(self, method_name, method_details):
         if method_name not in AuthMethod.__members__:
@@ -222,7 +304,18 @@ class Config:
           if param.get('required', False):
               params["required"].append(param_name)
       return params
-        
+    @staticmethod
+    def fetch_and_load_config_by_name(config_name, api_key=None):
+        url = f"https://api.gptplugins4all.com/configs/view-by-name?name={config_name}"
+        headers = {"Authorization": f"Bearer {api_key}"} if api_key else {}
+
+        response = requests.get(url, headers=headers)
+        if response.status_code == 200:
+            config_data = response.json()
+            return Config(config_data['spec'])
+        else:
+            raise Exception(f"Error fetching config: {response.content}")
+
     
    
     def extract_request_body(self, request_body):

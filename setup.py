@@ -17,5 +17,9 @@ setup(
         'License :: OSI Approved :: MIT License',
         'Operating System :: OS Independent',
     ],
-    
+    entry_points={
+        'console_scripts': [
+            'gpt-plugins-4all=GPTPlugins4All.cli:main',  # "gpt-plugins-4all" is the command users will type
+        ],
+    },
 )
