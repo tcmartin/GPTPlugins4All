@@ -59,7 +59,7 @@ class Config:
         if not api_key:
             raise ValueError("API key is required to fetch user configs")
         headers = {'Authorization': f'Bearer {api_key}'}
-        response = requests.get('http://localhost:5000/user/configs', headers=headers)
+        response = requests.get('https://api.gptplugins4all.com/user/configs', headers=headers)
         if response.status_code == 200:
             return response.json()
         else:
@@ -74,7 +74,7 @@ class Config:
             "auth_type": auth_type,
             "visibility": visibility
         })
-        response = requests.post('http://localhost:5000/configs/create_from_plugin_json_url', headers=headers, data=payload)
+        response = requests.post('https://api.gptplugins4all.com/configs/create_from_plugin_json_url', headers=headers, data=payload)
         if response.status_code == 200:
             return response.json()
         else:
