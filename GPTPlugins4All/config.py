@@ -90,7 +90,7 @@ class Config:
         # If not using cache, fetch new data and update the cache
         headers = {'Authorization': f'Bearer {api_key}'} if api_key else {}
         response = requests.get(
-            'https://api.gptplugins4all.com/configs',
+                'http://localhost:5000/configs',
             params={'query': query},
             headers=headers
         )
