@@ -17,7 +17,12 @@ class AuthMethod(Enum):
     NONE = 'NONE'
 
 class Config:
-    cache_file = 'search_cache.json'
+    #cache_file = 'search_cache.json'
+    #cache file should be in hidden folder
+    #make folder if it doesn't exist
+    if not os.path.exists(os.path.join(os.path.expanduser('~'), '.gpt-plugins-4all')):
+        os.makedirs(os.path.join(os.path.expanduser('~'), '.gpt-plugins-4all'))
+    cache_file = os.path.join(os.path.expanduser('~'), '.gpt-plugins-4all', 'search_cache.json')
     def __init__(self, spec_string):
         self.spec_string = spec_string
         self.spec_object = None
@@ -55,7 +60,7 @@ class Config:
 
         if use_cache:
             # Search within the cached data
-            return [config for config in cached_configs if query in config.get('name', '') or query in config.get('description', '')]
+            return [config for config in cached_configs if query.lower() in config.get('name', '').lower() or query.lower() in config.get('description', '').lower()]
 
         # If not using cache, fetch new data and update the cache
         headers = {'Authorization': f'Bearer {api_key}'} if api_key else {}
