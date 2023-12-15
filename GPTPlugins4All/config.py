@@ -55,6 +55,31 @@ class Config:
         with open(Config.cache_file, 'w') as file:
             json.dump(cache_data, file, indent=4)
     @staticmethod
+    def fetch_user_configs(api_key):
+        if not api_key:
+            raise ValueError("API key is required to fetch user configs")
+        headers = {'Authorization': f'Bearer {api_key}'}
+        response = requests.get('http://localhost:5000/user/configs', headers=headers)
+        if response.status_code == 200:
+            return response.json()
+        else:
+            raise Exception(f"Failed to fetch user configs: {response.status_code} - {response.text}")
+    @staticmethod
+    def create_config_from_url(api_key, url, auth_type='none', visibility='private'):
+        if not api_key:
+            raise ValueError("API key is required to create a new config")
+        headers = {'Authorization': f'Bearer {api_key}', 'Content-Type': 'application/json'}
+        payload = json.dumps({
+            "url": url,
+            "auth_type": auth_type,
+            "visibility": visibility
+        })
+        response = requests.post('http://localhost:5000/configs/create_from_plugin_json_url', headers=headers, data=payload)
+        if response.status_code == 200:
+            return response.json()
+        else:
+            raise Exception(f"Failed to create config from URL: {response.status_code} - {response.text}")
+    @staticmethod
     def search_configs(query, api_key=None, use_cache=True):
         cached_configs = Config.load_cache()
 
