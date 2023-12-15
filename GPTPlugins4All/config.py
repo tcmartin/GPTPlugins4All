@@ -23,14 +23,43 @@ class Config:
     if not os.path.exists(os.path.join(os.path.expanduser('~'), '.gpt-plugins-4all')):
         os.makedirs(os.path.join(os.path.expanduser('~'), '.gpt-plugins-4all'))
     cache_file = os.path.join(os.path.expanduser('~'), '.gpt-plugins-4all', 'search_cache.json')
-    def __init__(self, spec_string):
-        self.spec_string = spec_string
+    
+    
+    def __init__(self, input_value, api_key=None, validate=False):
+        self.spec_string = None
+        if self.is_valid_spec_string(input_value):
+            # Input is a spec string
+            self.spec_string = input_value
+        else:
+            # Input is assumed to be a config name
+            self.spec_string = self.fetch_spec_from_name(input_value, api_key)
+            self.model_description = self.get_model_description_by_name(input_value, api_key)
+
         self.spec_object = None
         self.auth_methods = {}
         self.id = str(uuid.uuid4())
         
         # Validate and parse the OpenAPI spec
-        self.validate_and_parse_spec(spec_string)
+        if validate:
+            self.validate_and_parse_spec(self.spec_string)
+        else:
+            self.parse_no_validate(self.spec_string)
+
+    
+    def is_valid_spec_string(self, input_value):
+        # Implement logic to check if the input value is a valid spec string
+        # This can be a simple check like whether it starts with '{' or is a YAML format
+        try:
+            self.validate_and_parse_spec(input_value)
+            return True
+        except:
+            return False
+    @staticmethod
+    def fetch_spec_from_name(config_name, api_key=None):
+        # Use the existing method to fetch the config by name
+        config_data = Config.fetch_spec_by_name(config_name, api_key)
+        # Extract the spec string from the config data
+        return config_data
     @classmethod
     def from_existing_config(cls, existing_config):
       """Create a Config object from an existing configuration dictionary."""
@@ -149,6 +178,12 @@ class Config:
           self.spec_object = spec_object
       except Exception as e:
           raise ValueError(f"Error loading OpenAPI spec: {e}")
+    def parse_no_validate(self, spec_string):
+        try:
+            spec_object = yaml.safe_load(spec_string) if self.is_yaml(spec_string) else json.loads(spec_string)
+            self.spec_object = spec_object
+        except Exception as e:
+            raise ValueError(f"Error loading OpenAPI spec: {e}")
 
     @staticmethod
     def is_yaml(string):
@@ -334,14 +369,38 @@ class Config:
           if param.get('required', False):
               params["required"].append(param_name)
       return params
-    @staticmethod
-    def fetch_and_load_config_by_name(config_name, api_key=None):
-        url = f"https://api.gptplugins4all.com/configs/view-by-name?name={config_name}"
+    @staticmethod 
+    def fetch_spec_by_name(config_name, api_key=None):
+        url = f"https://api.gptplugins4all.com/configs/{config_name}/fetch"
         headers = {"Authorization": f"Bearer {api_key}"} if api_key else {}
 
         response = requests.get(url, headers=headers)
         if response.status_code == 200:
             config_data = response.json()
+            return config_data['spec']
+        else:
+            raise Exception(f"Error fetching config: {response.content}")
+    @staticmethod
+    def get_model_description_by_name(config_name, api_key=None):
+        url = f"https://api.gptplugins4all.com/configs/{config_name}/fetch"
+        headers = {"Authorization": f"Bearer {api_key}"} if api_key else {}
+
+        response = requests.get(url, headers=headers)
+        if response.status_code == 200:
+            config_data = response.json()
+            return config_data.get('model_description', 'none')
+        else:
+            raise Exception(f"Error fetching config: {response.content}")
+    @staticmethod
+    def fetch_and_load_config_by_name(config_name, api_key=None):
+        url = f"https://api.gptplugins4all.com/configs/{config_name}/fetch"
+        headers = {"Authorization": f"Bearer {api_key}"} if api_key else {}
+
+        response = requests.get(url, headers=headers)
+        if response.status_code == 200:
+            config_data = response.json()
+            print(config_data)
+            print(config_data['spec'])
             return Config(config_data['spec'])
         else:
             raise Exception(f"Error fetching config: {response.content}")
