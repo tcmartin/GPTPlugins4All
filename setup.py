@@ -12,6 +12,9 @@ setup(
     install_requires=[
         'PyYAML', 'requests', 'openapi-spec-validator'
     ],
+    extras_require={
+        'openai':  ["openai"]
+    },
     classifiers=[
         'Programming Language :: Python :: 3',
         'License :: OSI Approved :: MIT License',

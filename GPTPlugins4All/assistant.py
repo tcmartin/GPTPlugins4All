@@ -1,13 +1,19 @@
 import os
 import time
 import json
-from openai import OpenAI
 from dotenv import load_dotenv
 
 load_dotenv()
 
 class Assistant:
     def __init__(self, config, name, instructions, model):
+        try:
+            from openai import OpenAI
+        except ImportError:
+            OpenAI = None
+
+        if OpenAI is None:
+            raise ImportError("The OpenAI library is required to use this functionality. Please install it with `pip install Your-Library[openai]`.")
         self.config = config
         self.name = name
         self.instructions = instructions
@@ -35,17 +41,17 @@ class Assistant:
                         print('cancelled run')
             else:
                 thread = self.openai_client.beta.threads.create()
-                print("Thread ID: save this for persistence: "+thread.id)
+                #print("Thread ID: save this for persistence: "+thread.id)
         else:
             assistant = self.openai_client.beta.assistants.create(
-                name="Finance Assistant",
+                name=self.name,
                 instructions=self.instructions+desc_string,
                 model=self.model,
                 tools=tools,
             )
-            print("Assistant ID: save this for persistence: "+assistant.id)
+            #print("Assistant ID: save this for persistence: "+assistant.id)
             thread = self.openai_client.beta.threads.create()
-            print("Thread ID: save this for persistence: "+thread.id)
+            #print("Thread ID: save this for persistence: "+thread.id)
 
         # Create a thread for the assistant
         return assistant, thread
@@ -82,7 +88,7 @@ class Assistant:
                 for tool_call in tool_calls:
                     print(tool_call)
                     if tool_call.type == "function":
-                        result = self.execute_function(tool_call.function.name, tool_call.function.arguments, self.config)
+                        result = self.execute_function(tool_call.function.name, tool_call.function.arguments)
                         output = {
                             "tool_call_id": tool_call.id,
                             "output": json.dumps(result)
