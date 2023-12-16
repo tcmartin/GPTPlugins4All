@@ -11,6 +11,7 @@ GPT Plugins 4All is a Python library designed to facilitate the integration of G
 - Generate structured API representations for AI interactions.
 - Dynamically construct API calls based on OpenAPI specs.
 - Support OAuth2.0 flow for token acquisition and usage.
+[![PyPI version](https://badge.fury.io/py/GPTPlugins4All.svg)](https://badge.fury.io/py/GPTPlugins4All)
 
 ## Installation
 
