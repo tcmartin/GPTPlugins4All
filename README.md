@@ -62,7 +62,7 @@ from GPTPlugins4All.config import Config
 spec_string = """..."""  # Your OpenAPI spec as a string
 config = Config(spec_string)
 ```
-Plugin our cli
+
 ### Adding Authentication Methods
 
 #### Add Basic Authentication
