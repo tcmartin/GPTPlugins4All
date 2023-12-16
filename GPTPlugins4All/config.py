@@ -211,7 +211,7 @@ class Config:
             raise ValueError(f"Invalid authentication method: {method_name}")
         self.auth_methods['method'] = method_name
         self.auth_methods['details'] = method_details
-        print(self.auth_methods)
+
     def start_oauth_flow(self):
       """Initiates the OAuth flow."""
       auth_config = self.auth_methods.get('details')
@@ -305,9 +305,7 @@ class Config:
     def prepare_auth(self, user_token, params):
         headers = {}
         auth_method = self.auth_methods.get('method', AuthMethod.NONE.value)
-        print(auth_method)
         auth_details = self.auth_methods.get('details', {})
-        print(auth_details)
         if auth_method == AuthMethod.OAUTH.value and user_token:
             headers["Authorization"] = f"Bearer {user_token['access_token']}"
         elif auth_method == AuthMethod.BASIC.value:
@@ -316,7 +314,6 @@ class Config:
             headers[auth_details['header_name']] = auth_details['key']
         elif auth_method == AuthMethod.QUERY.value:
             params[auth_details['param_name']] = auth_details['key']
-        print(headers, params)
         return headers, params
     def make_api_call_by_path(self, path, method, params, user_token=None, is_json=False):
         base_url = self.get_base_url()
