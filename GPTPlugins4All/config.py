@@ -342,7 +342,7 @@ class Config:
               tool = {
                   "type": "function",
                   "function": {
-                      "name": details.get('operationId', 'Unnamed'),
+                      "name": details.get('operationId', path+"-"+method),
                       "description": details.get('description', 'No description'),
                       "parameters": self.extract_parameters(details.get("parameters", []))
                   }

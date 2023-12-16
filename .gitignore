@@ -14,7 +14,7 @@ gpt_plugins_4all.egg-info/
 *.egg-info/
 *.egg
 MANIFEST
-
+demo/.env
 # PyInstaller
 # Usually these files are written by a python script from a template
 # before PyInstaller builds the exe, so as to inject date/other infos into it.
