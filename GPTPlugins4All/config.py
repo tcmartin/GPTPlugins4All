@@ -294,6 +294,8 @@ class Config:
         if not endpoint:
             raise ValueError(f"OperationId '{operation_id}' not found in API spec")
         base_url = self.get_base_url()
+        # Replace placeholders in the endpoint with actual parameter values
+        endpoint = endpoint.format(**params)
         url = f"{base_url}{endpoint}"
         
         headers, params = self.prepare_auth(user_token, params)
@@ -321,6 +323,8 @@ class Config:
         return headers, params
     def make_api_call_by_path(self, path, method, params, user_token=None, is_json=False):
         base_url = self.get_base_url()
+        # Replace placeholders in the path with actual parameter values
+        path = path.format(**params)
         url = f"{base_url}{path}"
         headers, params = self.prepare_auth(user_token, params)
         if is_json:

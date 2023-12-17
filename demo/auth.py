@@ -26,7 +26,6 @@ spec5 = '''
     "/spreadsheets": {
       "post": {
         "description": "Create a new spreadsheet",
-        "operationId": "createSpreadsheet",
         "requestBody": {
           "required": true,
           "content": {
@@ -59,7 +58,6 @@ spec5 = '''
     "/spreadsheets/{spreadsheetId}": {
       "get": {
         "description": "Retrieve spreadsheet details",
-        "operationId": "getSpreadsheetDetails",
         "parameters": [
           {
             "name": "spreadsheetId",
@@ -92,7 +90,6 @@ spec5 = '''
     "/spreadsheets/{spreadsheetId}/values/{range}": {
       "get": {
         "description": "Read spreadsheet values",
-        "operationId": "readSpreadsheetValues",
         "parameters": [
           {
             "name": "spreadsheetId",
@@ -133,7 +130,6 @@ spec5 = '''
     "/spreadsheets/{spreadsheetId}:batchUpdate": {
       "post": {
         "description": "Apply multiple updates to a spreadsheet in one request",
-        "operationId": "batchUpdateSpreadsheet",
         "parameters": [
           {
             "name": "spreadsheetId",
@@ -313,10 +309,11 @@ config5.add_auth_method("OAUTH", {
     "scope": "https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/drive"
 })
 assistant = Assistant(config5, "Sheet Assistant", "You are an assistant who helps users manage google sheets. ", "gpt-4-1106-preview")
-token = None
+callback = None
 @app.route('/')
 def oauth_callback():
     # Extract the code or token from the request
+    global callback
     code = request.args.get('code')
     token = request.args.get('token')  # Depending on the OAuth flow
 
@@ -325,7 +322,7 @@ def oauth_callback():
 
     # Return the code or token as a JSON response
     print(code)
-    config5.handle_oauth_callback(code)
+    callback = config5.handle_oauth_callback(code)
     return jsonify({
         "code": code
     })
@@ -333,13 +330,14 @@ def oauth_callback():
 def get_assistant_response_():
     user_input = request.json['message']
     print(user_input)
-    response = assistant.get_assistant_response(user_input, {'google_sheets':token})
+    response = assistant.get_assistant_response(user_input, {'google_sheets':callback})
     return jsonify(response)
 @app.route('/get_assistant_response', methods=['GET'])
 def get_assistant_response__():
     user_input = request.args.get('message')
     print(user_input)
-    response = assistant.get_assistant_response(user_input, {'google_sheets':token})
+    print(callback)
+    response = assistant.get_assistant_response(user_input, {'google_sheets':callback})
     return jsonify(response)
 
 if __name__ == '__main__':
