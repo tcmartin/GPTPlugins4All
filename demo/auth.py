@@ -304,8 +304,8 @@ config5 = Config(spec5, name='google_sheets')
 config5.add_auth_method("OAUTH", {
     "auth_url": "https://accounts.google.com/o/oauth2/auth",
     "token_url": "https://oauth2.googleapis.com/token",
-    "client_id": os.getenv('GOOGLE_CLIENT_ID'),
-    "client_secret": os.getenv('GOOGLE_CLIENT_SECRET'),
+    "client_id": "157594283315-l5n9kovn35ma3jhph5mvag2ch6nfknej.apps.googleusercontent.com",
+    "client_secret": "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",
     "redirect_uri": "http://localhost:8000",
     "scope": "https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/drive"
 })

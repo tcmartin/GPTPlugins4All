@@ -13,7 +13,7 @@ class Assistant:
             OpenAI = None
 
         if OpenAI is None:
-            raise ImportError("The OpenAI library is required to use this functionality. Please install it with `pip install Your-Library[openai]`.")
+            raise ImportError("The OpenAI library is required to use this functionality. Please install it with `pip install GPTPlugins4All[openai]`.")
         if isinstance(configs, list):
             self.configs = configs
             self.multiple_configs = True
@@ -91,7 +91,7 @@ class Assistant:
             return modified_tools
         else:
             return config.generate_tools_representation()
-    def get_assistant_response(self,message):
+    def get_assistant_response(self,message, user_tokens=None):
         message = self.openai_client.beta.threads.messages.create(
             thread_id=self.thread.id,
             role="user",
@@ -123,7 +123,13 @@ class Assistant:
                     if self.event_listener is not None:
                         self.event_listener(tool_call)
                     if tool_call.type == "function":
-                        result = self.execute_function(tool_call.function.name, tool_call.function.arguments)
+                        user_token = None
+                        if user_tokens is not None:
+                            if self.multiple_configs:
+                                user_token = user_tokens[tool_call.function.name.split('-', 1)[0]]
+                            else:
+                                user_token = user_tokens[self.configs[0].name]
+                        result = self.execute_function(tool_call.function.name, tool_call.function.arguments, user_token=user_token)
                         output = {
                             "tool_call_id": tool_call.id,
                             "output": json.dumps(result)
@@ -142,7 +148,7 @@ class Assistant:
     def get_entire_conversation(self):
         messages = self.openai_client.beta.threads.messages.list(thread_id=self.thread.id)
         return messages.data
-    def execute_function(self,function_name, arguments):
+    def execute_function(self,function_name, arguments, user_token=None):
         """Execute a function and return the result."""
         #example of function_name: "alpha_vantage/query"
         #config.make_api_call_by_operation_id("genericQuery", params={"function": "TIME_SERIES_DAILY", "symbol": "BTC", "market": "USD"}
@@ -164,7 +170,7 @@ class Assistant:
         arguments = json.loads(arguments)
         is_json = config.is_json
         try:
-            request = config.make_api_call_by_operation_id(actual_function_name, params=arguments, is_json=is_json)
+            request = config.make_api_call_by_operation_id(actual_function_name, params=arguments, is_json=is_json, user_token=user_token)
             if request.status_code == 200:
                 #check if json
                 print(request)
@@ -180,7 +186,7 @@ class Assistant:
                 split = actual_function_name.split("-")
                 method = split[1]
                 path = split[0]
-                request = config.make_api_call_by_path('/'+path, method.upper(), params=arguments, is_json=is_json)
+                request = config.make_api_call_by_path('/'+path, method.upper(), params=arguments, is_json=is_json, user_token=user_token)
                 print(request)
                 if request.status_code == 200:
                     #check if json
@@ -196,7 +202,7 @@ class Assistant:
                 import traceback
                 traceback.print_exc()
                 try:
-                    request = config.make_api_call_by_path(path, method.upper(), params=arguments, is_json=is_json)
+                    request = config.make_api_call_by_path(path, method.upper(), params=arguments, is_json=is_json, user_token=user_token)
                     if request.status_code == 200:
                         #check if json
                         print(request)
