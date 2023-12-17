@@ -301,12 +301,13 @@ spec5 = '''
 }
 '''
 config5 = Config(spec5, name='google_sheets')
+config5.is_json = True
 config5.add_auth_method("OAUTH", {
     "auth_url": "https://accounts.google.com/o/oauth2/auth",
     "token_url": "https://oauth2.googleapis.com/token",
     "client_id": os.getenv('GOOGLE_CLIENT_ID'),
     "client_secret": os.getenv('GOOGLE_CLIENT_SECRET'),
-    "redirect_uri": "http://localhost:8000",
+    "redirect_uri": "http://localhost:8000/",
     "scope": "https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/drive"
 })
 assistant = Assistant(config5, "Sheet Assistant", "You are an assistant who helps users manage google sheets. ", "gpt-4-1106-preview")
@@ -327,13 +328,13 @@ def oauth_callback():
         "code": code
     })
 @app.route('/get_assistant_response', methods=['POST'])
-def get_assistant_response():
+def get_assistant_response_():
     user_input = request.json['message']
     print(user_input)
     response = assistant.get_assistant_response(user_input, {'google_sheets':token})
     return jsonify(response)
 @app.route('/get_assistant_response', methods=['GET'])
-def get_assistant_response():
+def get_assistant_response__():
     user_input = request.args.get('message')
     print(user_input)
     response = assistant.get_assistant_response(user_input, {'google_sheets':token})

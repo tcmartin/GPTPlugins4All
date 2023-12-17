@@ -13,6 +13,7 @@ def main():
     config = Config('alpha_vantage')
     config.add_auth_method("QUERY", {"param_name": "apikey", "key": os.getenv('ALPHA_VANTAGE_KEY')})
     config2 = Config('sendgrid')
+
     config2.is_json = True
     #config2 = Config('GifApi')
     config2.add_auth_method("HEADER", {"header_name": "Authorization", "key": "Bearer "+os.getenv('SENDGRID_KEY')})

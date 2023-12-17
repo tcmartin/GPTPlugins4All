@@ -27,6 +27,8 @@ class Config:
     
     def __init__(self, input_value, api_key=None, validate=False, name=None):
         self.spec_string = None
+        self.model_description = None
+        self.is_json = None
         if self.is_valid_spec_string(input_value):
             # Input is a spec string
             self.spec_string = input_value
@@ -333,24 +335,54 @@ class Config:
                 if details.get('operationId') == operation_id:
                     return path, method
         return None, None
-    def generate_tools_representation(self):
-      tools = []
+    def get_ref(self, ref):
+        parts = ref.split("/")
+        obj = self.spec_object
+        for part in parts:
+            if part == '#':
+                continue
+            if part not in obj:
+                raise ValueError(f"Reference {ref} not found in schema")
+            obj = obj[part]
+        return obj
+    def resolve_ref(self, obj):
+        if isinstance(obj, dict):
+            if '$ref' in obj:
+                ref_obj = self.get_ref(obj['$ref'])
+                return self.resolve_ref(ref_obj)
+            else:
+                return {k: self.resolve_ref(v) for k, v in obj.items()}
+        elif isinstance(obj, list):
+            return [self.resolve_ref(item) for item in obj]
+        else:
+            return obj
 
-      for path, methods in self.spec_object.get("paths", {}).items():
-          for method, details in methods.items():
-              tool = {
-                  "type": "function",
-                  "function": {
-                      "name": details.get('operationId', path+"-"+method),
-                      "description": details.get('description', 'No description'),
-                      "parameters": self.extract_parameters(details.get("parameters", []))
-                  }
-              }
-              if 'requestBody' in details:
-                  tool["function"]["parameters"]["body"] = self.extract_request_body(details['requestBody'])
-              tools.append(tool)
-      
-      return tools
+    def extract_request_body_(self, request_body):
+        if 'content' in request_body and 'application/json' in request_body['content']:
+            schema = request_body['content']['application/json'].get('schema', {})
+            return self.resolve_ref(schema)
+        return {}
+
+    def generate_tools_representation(self):
+        tools = []
+
+        for path, methods in self.spec_object.get("paths", {}).items():
+            for method, details in methods.items():
+                tool = {
+                    "type": "function",
+                    "function": {
+                        "name": details.get('operationId', path + "-" + method),
+                        "description": details.get('description', 'No description'),
+                        "parameters": self.extract_parameters(details.get("parameters", []))
+                    }
+                }
+
+                if 'requestBody' in details:
+                    tool["function"]["requestBody"] = self.extract_request_body_(details['requestBody'])
+
+                tools.append(tool)
+
+        return tools
 
     def extract_parameters(self, parameters):
       params = {

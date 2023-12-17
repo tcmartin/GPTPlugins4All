@@ -12,7 +12,8 @@ load_dotenv()
 def main():
 
     config2 = Config('sendgrid')
-
+    print(config2.spec_object)
+    print(config2.spec_string)
     config2.add_auth_method("HEADER", {"header_name": "Authorization", "key": "Bearer "+os.getenv('SENDGRID_KEY')})
     config2.is_json = True
     assistant = Assistant([config2], "Email Assistant", "Assist users with emails. This system connects you to the SendGrid API so you can send emails. SendGrid requires json. You can directly call the api through this system. Attempt to use it as much as possible to assist the user.", "gpt-4-1106-preview")
