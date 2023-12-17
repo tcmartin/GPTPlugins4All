@@ -126,7 +126,7 @@ class Assistant:
                         user_token = None
                         if user_tokens is not None:
                             if self.multiple_configs:
-                                user_token = user_tokens[tool_call.function.name.split('-', 1)[0]]
+                                user_token = user_tokens.get(tool_call.function.name.split('-', 1)[0])
                             else:
                                 user_token = user_tokens[self.configs[0].name]
                         result = self.execute_function(tool_call.function.name, tool_call.function.arguments, user_token=user_token)
