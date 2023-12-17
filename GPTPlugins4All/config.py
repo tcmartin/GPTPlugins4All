@@ -25,15 +25,17 @@ class Config:
     cache_file = os.path.join(os.path.expanduser('~'), '.gpt-plugins-4all', 'search_cache.json')
     
     
-    def __init__(self, input_value, api_key=None, validate=False):
+    def __init__(self, input_value, api_key=None, validate=False, name=None):
         self.spec_string = None
         if self.is_valid_spec_string(input_value):
             # Input is a spec string
             self.spec_string = input_value
+            self.name = name
         else:
             # Input is assumed to be a config name
             self.spec_string = self.fetch_spec_from_name(input_value, api_key)
             self.model_description = self.get_model_description_by_name(input_value, api_key)
+            self.name = input_value
 
         self.spec_object = None
         self.auth_methods = {}

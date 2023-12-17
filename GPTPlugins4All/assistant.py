@@ -6,7 +6,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 class Assistant:
-    def __init__(self, config, name, instructions, model, assistant_id=None, thread_id=None, event_listener=None):
+    def __init__(self, configs, name, instructions, model, assistant_id=None, thread_id=None, event_listener=None):
         try:
             from openai import OpenAI
         except ImportError:
@@ -14,7 +14,12 @@ class Assistant:
 
         if OpenAI is None:
             raise ImportError("The OpenAI library is required to use this functionality. Please install it with `pip install Your-Library[openai]`.")
-        self.config = config
+        if isinstance(configs, list):
+            self.configs = configs
+            self.multiple_configs = True
+        else:
+            self.configs = [configs]
+            self.multiple_configs = False
         self.name = name
         self.instructions = instructions
         self.model = model
@@ -26,11 +31,19 @@ class Assistant:
 
     # Create an OpenAI assistant and a thread for interactions
     def create_assistant_and_thread(self):
-        # Extract tools from the Alpha Vantage config
-        tools = self.config.generate_tools_representation()
-        desc_string = ""
-        if self.config.model_description is not None and self.config.model_description != "none":
-            desc_string =  " Tool information below\n---------------\n"+self.config.model_description
+        # Extract tools from the configs
+        tools = []
+        model_descriptions = []
+        valid_descriptions = []
+        for config in self.configs:
+            tools.extend(self.modify_tools_for_config(config))
+            if config.model_description and config.model_description.lower() != "none":
+                valid_descriptions.append(config.model_description)
+        # Concatenate valid descriptions
+        if valid_descriptions:
+            desc_string = " Tool information below\n---------------\n" + "\n---------------\n".join(valid_descriptions)
+        else:
+            desc_string = ""
         # Initialize the OpenAI assistant
         if self.assistant_id is not None:
             assistant = self.openai_client.beta.assistants.retrieve(self.assistant_id)
@@ -58,8 +71,16 @@ class Assistant:
 
         # Create a thread for the assistant
         return assistant, thread
-
-
+    def modify_tools_for_config(self, config):
+        if self.multiple_configs:
+            modified_tools = []
+            for tool in config.generate_tools_representation():
+                if self.multiple_configs:
+                    tool['function']['name'] = config.name + '-' + tool['function']['name']
+                modified_tools.append(tool)
+            return modified_tools
+        else:
+            return config.generate_tools_representation()
     def get_assistant_response(self,message):
         message = self.openai_client.beta.threads.messages.create(
             thread_id=self.thread.id,
@@ -118,18 +139,28 @@ class Assistant:
         #config.make_api_call_by_path("/query", "GET", params={"function": "TIME_SERIES_DAILY", "symbol": "BTC", "market": "USD"})
         #actual implementation of the function
         #turn arguments into dictionary
+        if self.multiple_configs:
+            config_name, actual_function_name = function_name.split('-', 1)
+            config = next((cfg for cfg in self.configs if cfg.name == config_name), None)
+        else:
+            actual_function_name = function_name
+            config = self.configs[0]
+
+        if not config:
+            return "Configuration not found for function: " + function_name
+
         arguments = json.loads(arguments)
         try:
-            request = self.config.make_api_call_by_operation_id(function_name, params=arguments)
+            request = config.make_api_call_by_operation_id(actual_function_name, params=arguments)
             return request.json()
         except Exception as e:
             print(e)
             try:
                 #split the function name into path and method by - eg query-GET
-                split = function_name.split("-")
+                split = actual_function_name.split("-")
                 method = split[1]
                 path = split[0]
-                request = self.config.make_api_call_by_path('/'+path, method.upper(), params=arguments)
+                request = config.make_api_call_by_path('/'+path, method.upper(), params=arguments)
                 print(request.json())
                 return request.json()
             except Exception as e:
@@ -138,7 +169,7 @@ class Assistant:
                 import traceback
                 traceback.print_exc()
                 try:
-                    request = self.config.make_api_call_by_path(path, method.upper(), params=arguments)
+                    request = config.make_api_call_by_path(path, method.upper(), params=arguments)
                     return request.json()
                 except Exception as e:
                     print(e)
