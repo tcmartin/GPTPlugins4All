@@ -36,9 +36,19 @@ class Assistant:
         model_descriptions = []
         valid_descriptions = []
         for config in self.configs:
-            tools.extend(self.modify_tools_for_config(config))
+            modified_tools = self.modify_tools_for_config(config)
+            for tool in modified_tools:
+                # Add 'is_json' parameter to the parameters of each tool
+                """tool['function']['parameters']['properties']['is_json'] = {
+                    'type': 'boolean', 
+                    'description': "Do with json or not - should be used if errors with Content-Type occur. Should never be used on its own"
+                }"""
+                tools.append(tool)
+                # Include 'is_json' in the required parameters if necessary
+                # tool['function']['parameters']['required'].append('is_json')
             if config.model_description and config.model_description.lower() != "none":
                 valid_descriptions.append(config.model_description)
+        print(tools)
         # Concatenate valid descriptions
         if valid_descriptions:
             desc_string = " Tool information below\n---------------\n" + "\n---------------\n".join(valid_descriptions)
@@ -139,6 +149,8 @@ class Assistant:
         #config.make_api_call_by_path("/query", "GET", params={"function": "TIME_SERIES_DAILY", "symbol": "BTC", "market": "USD"})
         #actual implementation of the function
         #turn arguments into dictionary
+        print(function_name)
+        print(arguments)
         if self.multiple_configs:
             config_name, actual_function_name = function_name.split('-', 1)
             config = next((cfg for cfg in self.configs if cfg.name == config_name), None)
@@ -150,9 +162,17 @@ class Assistant:
             return "Configuration not found for function: " + function_name
 
         arguments = json.loads(arguments)
+        is_json = config.is_json
         try:
-            request = config.make_api_call_by_operation_id(actual_function_name, params=arguments)
-            return request.json()
+            request = config.make_api_call_by_operation_id(actual_function_name, params=arguments, is_json=is_json)
+            if request.status_code == 200:
+                #check if json
+                print(request)
+                print(request.text)
+                if is_json:
+                    return request.json()
+                else:
+                    return request.text
         except Exception as e:
             print(e)
             try:
@@ -160,17 +180,31 @@ class Assistant:
                 split = actual_function_name.split("-")
                 method = split[1]
                 path = split[0]
-                request = config.make_api_call_by_path('/'+path, method.upper(), params=arguments)
-                print(request.json())
-                return request.json()
+                request = config.make_api_call_by_path('/'+path, method.upper(), params=arguments, is_json=is_json)
+                print(request)
+                if request.status_code == 200:
+                    #check if json
+                    print(request)
+                    print(request.text)
+                    if is_json:
+                        return request.json()
+                    else:
+                        return request.text
             except Exception as e:
                 print(e)
                 #debug stack trace
                 import traceback
                 traceback.print_exc()
                 try:
-                    request = config.make_api_call_by_path(path, method.upper(), params=arguments)
-                    return request.json()
+                    request = config.make_api_call_by_path(path, method.upper(), params=arguments, is_json=is_json)
+                    if request.status_code == 200:
+                        #check if json
+                        print(request)
+                        print(request.text)
+                        if is_json:
+                            return request.json()
+                        else:
+                            return request.text
                 except Exception as e:
                     print(e)
                     return "Error"
