@@ -169,16 +169,18 @@ class Assistant:
 
         arguments = json.loads(arguments)
         is_json = config.is_json
+        successful_status_codes = [200, 201, 204, 202, 203, 205, 206, 207, 208, 226]
         try:
             request = config.make_api_call_by_operation_id(actual_function_name, params=arguments, is_json=is_json, user_token=user_token)
-            if request.status_code == 200:
+            print(request)
+            print(request.status_code)
+            if request.status_code in successful_status_codes:
                 #check if json
-                print(request)
                 print(request.text)
-                if is_json:
-                    return request.json()
-                else:
-                    return request.text
+                try:
+                    return request.json()+"\n 200 OK"
+                except Exception as e:
+                    return request.text+"\n 200 OK"
         except Exception as e:
             print(e)
             try:
@@ -188,14 +190,15 @@ class Assistant:
                 path = split[0]
                 request = config.make_api_call_by_path('/'+path, method.upper(), params=arguments, is_json=is_json, user_token=user_token)
                 print(request)
-                if request.status_code == 200:
+                print(request.status_code)
+                if request.status_code in successful_status_codes:
                     #check if json
-                    print(request)
                     print(request.text)
-                    if is_json:
-                        return request.json()
-                    else:
-                        return request.text
+                    #check if response is json
+                    try:
+                        return request.json()+"\n 200 OK"
+                    except Exception as e:
+                        return request.text+"\n 200 OK"
             except Exception as e:
                 print(e)
                 #debug stack trace
@@ -203,14 +206,14 @@ class Assistant:
                 traceback.print_exc()
                 try:
                     request = config.make_api_call_by_path(path, method.upper(), params=arguments, is_json=is_json, user_token=user_token)
-                    if request.status_code == 200:
+                    print(request)
+                    if request.status_code in successful_status_codes:
                         #check if json
-                        print(request)
                         print(request.text)
-                        if is_json:
-                            return request.json()
-                        else:
-                            return request.text
+                        try:
+                            return request.json()+"\n 200 OK"
+                        except Exception as e:
+                            return request.text+"\n 200 OK"
                 except Exception as e:
                     print(e)
                     return "Error"

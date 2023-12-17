@@ -301,6 +301,8 @@ spec5 = '''
 }
 '''
 config5 = Config(spec5, name='google_sheets')
+print(config5.spec_object)
+print(config5.spec_string)
 config5.is_json = True
 config5.add_auth_method("OAUTH", {
     "auth_url": "https://accounts.google.com/o/oauth2/auth",
