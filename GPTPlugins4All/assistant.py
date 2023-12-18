@@ -185,6 +185,8 @@ class Assistant:
                 #split the function name into path and method by - eg query-GET
                 split = actual_function_name.split("-")
                 method = split[1]
+                if method.upper() == "GET" or method.upper() == "DELETE":
+                    is_json = False
                 path = split[0]
                 request = config.make_api_call_by_path(path, method.upper(), params=arguments, is_json=is_json, user_token=user_token)
                 print(request)

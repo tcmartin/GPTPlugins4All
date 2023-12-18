@@ -223,11 +223,13 @@ class Config:
           raise ValueError("OAuth configuration not found")
 
       params = {
-          "response_type": "code",
+          "response_type": auth_config["response_type"],
           "client_id": auth_config["client_id"],
           "redirect_uri": auth_config["redirect_uri"],
           "scope": auth_config.get("scope", "")
       }
+      if 'custom_parameters' in auth_config:
+        params.update(auth_config['custom_parameters'])
       auth_url = f"{auth_config['auth_url']}?{urlencode(params)}"
       return auth_url
     def handle_oauth_callback(self, code):
@@ -297,7 +299,8 @@ class Config:
         # Replace placeholders in the endpoint with actual parameter values
         endpoint = endpoint.format(**params)
         url = f"{base_url}{endpoint}"
-        
+        if method.upper() == 'GET' or method.upper() == 'DELETE':
+            is_json = False
         headers, params = self.prepare_auth(user_token, params)
         
         if is_json:

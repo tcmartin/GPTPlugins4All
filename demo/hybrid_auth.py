@@ -16,6 +16,7 @@ config2 = Config('sendgrid')
 config2.add_auth_method("HEADER", {"header_name": "Authorization", "key": "Bearer "+os.getenv('SENDGRID_KEY')})
 config2.is_json = True
 config5.add_auth_method("OAUTH", {
+    "response_type": "code",
     "auth_url": "https://accounts.google.com/o/oauth2/auth",
     "token_url": "https://oauth2.googleapis.com/token",
     "client_id": os.getenv('GOOGLE_CLIENT_ID'),
