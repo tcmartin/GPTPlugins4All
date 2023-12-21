@@ -6,7 +6,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 class Assistant:
-    def __init__(self, configs, name, instructions, model, assistant_id=None, thread_id=None, event_listener=None):
+    def __init__(self, configs, name, instructions, model, assistant_id=None, thread_id=None, event_listener=None, openai_key=None):
         try:
             from openai import OpenAI
         except ImportError:
@@ -26,7 +26,10 @@ class Assistant:
         self.event_listener = event_listener
         self.assistant_id = assistant_id
         self.thread_id = thread_id
-        self.openai_client = OpenAI()
+        if openai_key is None:
+            self.openai_client = OpenAI()
+        else:
+            self.openai_client = OpenAI(openai_key)
         self.assistant, self.thread = self.create_assistant_and_thread()
 
     # Create an OpenAI assistant and a thread for interactions
