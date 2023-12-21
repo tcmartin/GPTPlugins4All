@@ -25,15 +25,19 @@ class Config:
     cache_file = os.path.join(os.path.expanduser('~'), '.gpt-plugins-4all', 'search_cache.json')
     
     
-    def __init__(self, input_value, api_key=None, validate=False):
+    def __init__(self, input_value, api_key=None, validate=False, name=None):
         self.spec_string = None
+        self.model_description = None
+        self.is_json = None
         if self.is_valid_spec_string(input_value):
             # Input is a spec string
             self.spec_string = input_value
+            self.name = name
         else:
             # Input is assumed to be a config name
             self.spec_string = self.fetch_spec_from_name(input_value, api_key)
             self.model_description = self.get_model_description_by_name(input_value, api_key)
+            self.name = input_value
 
         self.spec_object = None
         self.auth_methods = {}
@@ -219,11 +223,13 @@ class Config:
           raise ValueError("OAuth configuration not found")
 
       params = {
-          "response_type": "code",
+          "response_type": auth_config["response_type"],
           "client_id": auth_config["client_id"],
           "redirect_uri": auth_config["redirect_uri"],
           "scope": auth_config.get("scope", "")
       }
+      if 'custom_parameters' in auth_config:
+        params.update(auth_config['custom_parameters'])
       auth_url = f"{auth_config['auth_url']}?{urlencode(params)}"
       return auth_url
     def handle_oauth_callback(self, code):
@@ -290,8 +296,11 @@ class Config:
         if not endpoint:
             raise ValueError(f"OperationId '{operation_id}' not found in API spec")
         base_url = self.get_base_url()
+        # Replace placeholders in the endpoint with actual parameter values
+        endpoint = endpoint.format(**params)
         url = f"{base_url}{endpoint}"
-        
+        if method.upper() == 'GET' or method.upper() == 'DELETE':
+            is_json = False
         headers, params = self.prepare_auth(user_token, params)
         
         if is_json:
@@ -317,6 +326,8 @@ class Config:
         return headers, params
     def make_api_call_by_path(self, path, method, params, user_token=None, is_json=False):
         base_url = self.get_base_url()
+        # Replace placeholders in the path with actual parameter values
+        path = path.format(**params)
         url = f"{base_url}{path}"
         headers, params = self.prepare_auth(user_token, params)
         if is_json:
@@ -331,41 +342,69 @@ class Config:
                 if details.get('operationId') == operation_id:
                     return path, method
         return None, None
+    def get_ref(self, ref):
+        parts = ref.split("/")
+        obj = self.spec_object
+        for part in parts:
+            if part == '#':
+                continue
+            if part not in obj:
+                raise ValueError(f"Reference {ref} not found in schema")
+            obj = obj[part]
+        return obj
+    def resolve_ref(self, obj):
+        if isinstance(obj, dict):
+            if '$ref' in obj:
+                ref_obj = self.get_ref(obj['$ref'])
+                return self.resolve_ref(ref_obj)
+            else:
+                return {k: self.resolve_ref(v) for k, v in obj.items()}
+        elif isinstance(obj, list):
+            return [self.resolve_ref(item) for item in obj]
+        else:
+            return obj
+
+
+    def extract_request_body(self, request_body):
+        if 'content' in request_body and 'application/json' in request_body['content']:
+            schema = request_body['content']['application/json'].get('schema', {})
+            return self.resolve_ref(schema)  # Return the entire resolved schema
+        return {}
     def generate_tools_representation(self):
-      tools = []
+        tools = []
 
-      for path, methods in self.spec_object.get("paths", {}).items():
-          for method, details in methods.items():
-              tool = {
-                  "type": "function",
-                  "function": {
-                      "name": details.get('operationId', path+"-"+method),
-                      "description": details.get('description', 'No description'),
-                      "parameters": self.extract_parameters(details.get("parameters", []))
-                  }
-              }
-              if 'requestBody' in details:
-                  tool["function"]["parameters"]["body"] = self.extract_request_body(details['requestBody'])
-              tools.append(tool)
-      
-      return tools
+        for path, methods in self.spec_object.get("paths", {}).items():
+            for method, details in methods.items():
+                tool_parameters = self.extract_parameters(details.get("parameters", []))
 
+                if 'requestBody' in details:
+                    body_params = self.extract_request_body(details['requestBody'])
+                    # Merge the requestBody properties directly into the parameters properties
+                    if 'properties' in body_params:
+                        tool_parameters['properties'].update(body_params['properties'])
+
+                tool = {
+                    "type": "function",
+                    "function": {
+                        "name": details.get('operationId', path + "-" + method),
+                        "description": details.get('description', 'No description'),
+                        "parameters": tool_parameters
+                    }
+                }
+                tools.append(tool)
+
+        return tools
     def extract_parameters(self, parameters):
-      params = {
-          "type": "object",
-          "properties": {},
-          "required": []
-      }
-      for param in parameters:
-          param_name = param['name']
-          param_details = param.get('schema', {})
-          params["properties"][param_name] = {
-              "type": param_details.get('type', 'unknown'),
-              "description": param.get('description', 'No description')
-          }
-          if param.get('required', False):
-              params["required"].append(param_name)
-      return params
+        params = {"type": "object", "properties": {}, "required": []}
+        for param in parameters:
+            if param['in'] == 'path':
+                param_name = param['name']
+                param_details = param.get('schema', {})
+                resolved_param_details = self.resolve_ref(param_details)
+                params["properties"][param_name] = resolved_param_details
+                if param.get('required', False):
+                    params["required"].append(param_name)
+        return params
     @staticmethod 
     def fetch_spec_by_name(config_name, api_key=None):
         url = f"https://api.gptplugins4all.com/configs/{config_name}/fetch"
@@ -404,8 +443,3 @@ class Config:
 
     
    
-    def extract_request_body(self, request_body):
-      # Extract and return the request body schema
-      # You might need to modify this based on the structure of your request body
-      return request_body.get("content", {}).get("application/json", {}).get("schema", {})
-
